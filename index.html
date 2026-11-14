@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="robots" content="noindex, nofollow"/>
+<title>Camble Control Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0a0c10; --panel:#111419; --panel2:#161a21; --line:#242a33;
+  --ink:#e6e9ef; --mut:#9aa4b2; --faint:#6b7483;
+  --accent:#4cc2ff; --accent2:#2dd4bf;
+  --good:#3fb950; --warn:#d6a516; --bad:#f85149;
+  --rub:#ffb454; --usd:#5ad19a;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+h1,h2,h3,.num{font-family:Manrope,system-ui,sans-serif}
+.num{font-variant-numeric:tabular-nums}
+a{color:inherit}
+.app{display:grid;grid-template-columns:232px 1fr;min-height:100%}
+.rail{background:var(--panel);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 18px}
+.logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#021018;font-weight:800;font-family:Manrope}
+.brand b{font-family:Manrope;font-weight:800;letter-spacing:.2px}
+.brand small{display:block;color:var(--faint);font-size:11px;font-weight:500}
+.nav{display:flex;flex-direction:column;gap:3px}
+.nav button{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:9px;color:var(--mut);background:none;border:0;font:inherit;font-weight:600;font-size:13.5px;cursor:pointer;text-align:left;width:100%}
+.nav button .ic{width:16px;height:16px;opacity:.8;flex:none}
+.nav button.on{background:var(--panel2);color:var(--ink)}
+.nav button.on .ic{color:var(--accent);opacity:1}
+.rail .foot{margin-top:auto;color:var(--faint);font-size:11px;padding:8px}
+.main{padding:22px 26px 48px;max-width:1160px}
+.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+.top h1{font-size:20px;font-weight:800;margin:0}
+.top .sub{color:var(--mut);font-size:12.5px;margin-top:2px}
+.spacer{flex:1}
+.live{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:7px 12px;font-weight:600;font-size:13px}
+.pulse{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 rgba(63,185,80,.5);animation:pulse 2s infinite}
+.pulse.off{background:var(--faint);animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(63,185,80,.45)}70%{box-shadow:0 0 0 7px rgba(63,185,80,0)}100%{box-shadow:0 0 0 0 rgba(63,185,80,0)}}
+@media (prefers-reduced-motion:reduce){.pulse{animation:none}}
+.upd{color:var(--faint);font-size:11.5px;display:flex;align-items:center;gap:6px}
+.upd.warn{color:var(--warn)}
+.upd.bad{color:var(--bad)}
+.freshdot{width:7px;height:7px;border-radius:50%;flex:none}
+.freshdot.ok{background:var(--good)}
+.freshdot.warn{background:var(--warn)}
+.freshdot.bad{background:var(--bad)}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px}
+.kpis.m6{grid-template-columns:repeat(6,1fr)}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 16px}
+.kpi .k{color:var(--mut);font-size:12px;font-weight:600;display:flex;align-items:center;gap:7px}
+.kpi .v{font-size:26px;font-weight:800;margin-top:9px;letter-spacing:-.5px}
+.kpi .v small{font-size:14px;color:var(--mut);font-weight:700}
+.kpi .d{font-size:11.5px;color:var(--faint);margin-top:4px;min-height:16px}
+.dot-g{width:7px;height:7px;border-radius:50%;background:var(--good)}
+.cards{display:grid;grid-template-columns:1.35fr 1fr;gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:16px}
+.card.full{grid-column:1/-1}
+.card h3{margin:0 0 2px;font-size:14.5px;font-weight:700}
+.card .cap{color:var(--mut);font-size:12px;margin-bottom:12px}
+.chart{width:100%;height:auto;display:block}
+.grid{stroke:var(--line);stroke-width:1}
+.ylab,.xlab{fill:var(--faint);font-size:10px;font-family:"IBM Plex Sans"}
+.ylab{text-anchor:end}.xlab{text-anchor:middle}
+.aline{fill:none;stroke:var(--accent);stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round}
+.peakline{fill:none;stroke:var(--faint);stroke-width:1.2;stroke-dasharray:3 3;opacity:.55}
+.dot{fill:var(--accent);stroke:var(--bg);stroke-width:2}
+.dotlab{fill:var(--ink);font-size:11px;font-weight:700;text-anchor:middle;font-family:Manrope}
+.bar{fill:#2b3442}.bar.hot{fill:var(--accent)}
+.barval{fill:var(--faint);font-size:9px;text-anchor:middle;font-family:"IBM Plex Sans"}
+.legend{display:flex;gap:16px;color:var(--mut);font-size:11.5px;margin-top:8px;flex-wrap:wrap}
+.legend i{display:inline-block;width:18px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:right;padding:9px 8px;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--faint);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+td.num{font-variant-numeric:tabular-nums}
+tfoot td,tfoot th{border-top:2px solid var(--line);border-bottom:0;font-weight:800;font-family:Manrope}
+.rub{color:var(--rub)}.usd{color:var(--usd)}
+.stname{font-weight:700}
+.pill{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid var(--line);color:var(--mut)}
+.pill.g{color:var(--good);border-color:rgba(63,185,80,.3);background:rgba(63,185,80,.08)}
+.pill.off{color:var(--faint)}
+.seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px}
+.seg button{background:none;border:0;color:var(--mut);font:inherit;font-weight:600;font-size:12.5px;padding:6px 12px;border-radius:7px;cursor:pointer}
+.seg button.on{background:var(--panel2);color:var(--ink)}
+select,input[type=search]{background:var(--panel);border:1px solid var(--line);color:var(--ink);font:inherit;font-size:13px;padding:7px 10px;border-radius:9px}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{background:var(--panel);border:1px solid var(--line);color:var(--mut);font-weight:600;font-size:12.5px;padding:6px 12px;border-radius:20px;cursor:pointer}
+.chip.on{background:var(--panel2);color:var(--ink);border-color:var(--accent)}
+.heat{display:grid;grid-template-columns:repeat(24,1fr);gap:3px;margin-top:4px}
+.cell{text-align:center}
+.cell span{display:block;height:34px;border-radius:4px;background:var(--accent)}
+.cell b{font-size:8.5px;color:var(--faint);font-weight:600;display:block;margin-top:4px;font-family:"IBM Plex Sans"}
+.peaks{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.peakchip{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 12px}
+.peakchip .t{font-size:11px;color:var(--mut)}.peakchip .b{font-weight:800;font-family:Manrope;font-size:15px;margin-top:2px}
+.note{color:var(--faint);font-size:11.5px;margin-top:10px}
+.banner{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:10px;padding:12px 14px;margin-bottom:16px;color:var(--mut);font-size:13px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.stcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.stcard h4{margin:0 0 10px;font-family:Manrope;font-size:16px;display:flex;align-items:center;gap:8px}
+.stcard .row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px}
+.stcard .row:last-child{border-bottom:0}
+.stcard .row span:first-child{color:var(--mut)}
+.card .row{display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:13px}
+.termbox{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:4px 0 10px}
+.termbox .row{display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:13px;border-bottom:1px solid var(--line)}
+.termbox .row:last-child{border-bottom:0}
+.termbox .row span:first-child{color:var(--mut)}
+.rule{font-size:12px;color:var(--mut);line-height:1.45;margin-bottom:10px;padding-left:10px;border-left:2px solid var(--accent)}
+.scheme{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:10px 12px;margin:4px 0 10px}
+.scheme .sh{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin-bottom:7px}
+.scheme .f{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.7;color:var(--fg)}
+.scheme .f .lbl{display:inline-block;min-width:16px;color:var(--mut)}
+.scheme .f .rub{color:var(--rub)}.scheme .f .usd{color:var(--usd)}
+.scheme .f .op{color:var(--faint)}
+.scheme .ex{margin-top:7px;padding-top:7px;border-top:1px dashed var(--line);font-size:12px;color:var(--mut);line-height:1.6}
+.cap2{color:var(--mut);font-size:12.5px;margin:2px 0 10px}
+.muted{color:var(--faint)}
+/* needs attention */
+.attn{border-left:3px solid var(--warn)}
+.attlist{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+.attrow{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}
+.attrow:last-child{border-bottom:0}
+.attrow b{min-width:170px;font-weight:700}
+.attrow .atext{color:var(--mut)}
+.dotx{width:8px;height:8px;border-radius:50%;flex:none}
+.dotx.bad{background:var(--bad)}.dotx.warn{background:var(--warn)}.dotx.info{background:var(--accent)}
+.warnv{color:var(--warn);font-weight:700}
+/* forecast / session tiles */
+.fc{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.fcitem{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.fcitem .k{color:var(--mut);font-size:12px;font-weight:600}
+.fcitem .v{font-family:Manrope;font-weight:800;font-size:22px;margin-top:6px;letter-spacing:-.4px}
+.fcitem .v small{font-size:13px;color:var(--mut);font-weight:700}
+.fcitem .d{color:var(--faint);font-size:11px;margin-top:3px}
+/* horizontal bars / leaderboards */
+.hbars{display:flex;flex-direction:column;gap:9px;margin-top:4px}
+.hbar{display:grid;grid-template-columns:120px 1fr auto;align-items:center;gap:10px}
+.hbl{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbtrack{height:10px;background:var(--panel2);border-radius:6px;overflow:hidden}
+.hbfill{height:100%;border-radius:6px;min-width:3px}
+.hbv{font-size:12.5px;color:var(--mut);font-weight:700;white-space:nowrap}
+/* share bar */
+.shbar{display:flex;height:22px;border-radius:7px;overflow:hidden;background:var(--panel2);margin:4px 0 10px}
+.shseg{height:100%}
+.shlegs{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--mut)}
+.shleg i{display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:middle;margin-right:5px}
+.shleg b{color:var(--ink)}
+/* progress */
+.pgt{height:7px;background:var(--panel2);border-radius:5px;overflow:hidden;min-width:70px}
+.pgf{height:100%;border-radius:5px;min-width:3px}
+.normcell{display:flex;align-items:center;gap:8px;min-width:100px}
+/* weekday×hour heatmap */
+.whgrid{display:grid;grid-template-columns:42px repeat(24,1fr);gap:2px;align-items:center}
+.whcorner{height:14px}
+.whh{font-size:9px;color:var(--faint);text-align:center;font-family:"IBM Plex Sans"}
+.whd{font-size:11px;color:var(--mut);font-weight:600}
+.whc span{display:block;height:16px;border-radius:3px;background:var(--accent)}
+/* sortable headers */
+th.srt{cursor:pointer;user-select:none;white-space:nowrap}
+th.srt:hover{color:var(--ink)}
+tr.mrow{cursor:pointer}
+tr.mrow:hover td{background:var(--panel2)}
+/* modal */
+.modal{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal.hidden{display:none}
+.modalbg{position:absolute;inset:0;background:rgba(0,0,0,.6)}
+.modalbox{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;max-width:560px;width:100%;max-height:86vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.modalbox h4.msub{margin:16px 0 6px;font-size:13px;color:var(--mut);font-weight:700}
+.modalbox .mmeta{color:var(--mut);font-size:12.5px;margin-bottom:6px}
+.mclose{position:absolute;top:14px;right:14px;background:var(--panel2);border:1px solid var(--line);color:var(--mut);width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:14px}
+.mclose:hover{color:var(--ink)}
+/* studio report */
+.report{max-width:720px;margin:0 auto}
+.rephead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:12px}
+.repbig{text-align:right;white-space:nowrap}
+.reptable{font-size:13px}
+.reptable th,.reptable td{padding:6px 8px}
+.repnote{color:var(--faint);font-size:11.5px;margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+/* светлый документ для PDF */
+.pdfdoc{background:#ffffff;color:#14171c;width:860px;max-width:none!important;padding:30px 34px;box-sizing:border-box;border:0!important;border-radius:0;font-family:"IBM Plex Sans",system-ui,sans-serif;margin:0!important}
+.pdfdoc table{font-size:12.5px}
+.pdfdoc .rephead h2{font-size:24px}
+.pdfdoc h2,.pdfdoc h3{color:#0a0c10;font-family:Manrope,sans-serif}
+.pdfdoc .muted{color:#6b7483}
+.pdfdoc .rub{color:#b5730f} .pdfdoc .usd{color:#138a56}
+.pdfdoc .rephead{border-bottom:2px solid #d6dbe2;padding-bottom:14px;margin-bottom:14px}
+.pdfdoc table{width:100%;border-collapse:collapse;font-size:13px}
+.pdfdoc th{color:#6b7483;border-bottom:2px solid #d0d6de;text-transform:uppercase;font-size:11px;letter-spacing:.4px;padding:8px 9px}
+.pdfdoc td{border-bottom:1px solid #e6e9ef;padding:8px 9px;color:#14171c}
+.pdfdoc .stname{color:#0a0c10;font-weight:700}
+.pdfdoc tfoot td{border-top:2px solid #d0d6de;border-bottom:0;background:#f4f7fa;font-weight:800}
+.pdfdoc .warnv{color:#c0392b;font-weight:700}
+.pdfdoc .repnote{border-top:1px solid #e6e9ef;color:#6b7483;margin-top:14px;padding-top:10px}
+.pdfdoc .repbig .num{color:#0a0c10}
+.pdfdoc .repbig .rub{color:#b5730f} .pdfdoc .repbig .usd{color:#138a56}
+body.reportonly .rail,body.reportonly .top{display:none}
+body.reportonly .app{display:block}
+body.reportonly .main{max-width:780px;margin:0 auto;padding:24px 16px}
+@media print{
+ .rail,.top,.noprint{display:none!important}
+ .app{display:block}
+ html,body{background:#fff;color:#111}
+ .card,.report{border:1px solid #ccc;box-shadow:none;background:#fff}
+ h2,h3,.stname,td,th,.num{color:#111}
+ .main{max-width:100%;padding:0}
+}
+@media (max-width:860px){
+  .app{grid-template-columns:1fr}
+  .rail{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center}
+  .rail .brand{padding:0 10px 0 0}.nav{flex-direction:row;flex-wrap:wrap}.rail .foot{display:none}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .kpis.m6{grid-template-columns:repeat(2,1fr)}
+  .fc{grid-template-columns:repeat(2,1fr)}
+  .cards{grid-template-columns:1fr}
+  .attrow b{min-width:0}
+  table{font-size:12px}
+  th,td{padding:7px 5px}
+  .main{padding:18px 16px 44px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="brand"><div class="logo">C</div><div><b>Camble</b><small>Control Center</small></div></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="foot" id="foot">loading…</div>
+  </aside>
+  <main class="main">
+    <div class="top">
+      <div><h1 id="title">Overview</h1><div class="sub" id="subtitle">All studios · time MSK (UTC+3)</div></div>
+      <div class="spacer"></div>
+      <div class="live"><span class="pulse off" id="pulse"></span><span id="livetxt">—</span></div>
+      <div class="upd" id="upd"></div>
+    </div>
+    <div id="view"></div>
+  </main>
+</div>
+<div id="modal" class="modal hidden"><div class="modalbg" id="modalbg"></div><div class="modalbox" id="modalbox"></div></div>
+<script>
+const SECTIONS=[
+ ["overview","Overview",'<rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/>'],
+ ["live","Live · Today",'<circle cx="12" cy="12" r="3"/><path d="M5 12a7 7 0 0114 0"/><path d="M2 12a10 10 0 0120 0"/>'],
+ ["online","Online Analytics",'<path d="M3 15l5-6 4 4 5-7 4 5"/>'],
+ ["studios","Studios",'<path d="M3 21h18M6 21V9l6-4 6 4v12"/>'],
+ ["models","Models",'<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0112 0v1"/>'],
+ ["discipline","Discipline",'<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h9"/>'],
+ ["payroll","Payroll",'<path d="M3 10h18M3 6h18v12H3zM7 15h4"/>'],
+ ["report","Studio report",'<path d="M7 3h7l5 5v13H7z" fill="none"/><path d="M14 3v5h5M9 13h6M9 17h6"/>'],
+ ["ceo","Отчёт для Ильи",'<path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>'],
+];
+let SNAP=null, state={section:"overview", onlineStudio:"all", onlineMonth:null, payScope:"period", paySel:null, modelStudio:"all", modelQ:"", modelSort:{key:"hours_period",dir:-1}, paySort:{key:"hours",dir:-1}, reportStudio:null, reportPeriod:null, ceoScope:"period", ceoSel:null};
+
+const $=s=>document.querySelector(s);
+const el=(t,c,h)=>{const e=document.createElement(t); if(c)e.className=c; if(h!=null)e.innerHTML=h; return e;};
+const esc=s=>String(s==null?"":s).replace(/[&<>]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[m]));
+const hm=h=>{if(h==null)return"—";const m=Math.round(h*60);return `${Math.floor(m/60)}:${String(m%60).padStart(2,"0")}`;};
+const rub=v=>v==null?"—":`${Math.round(v).toLocaleString("ru-RU")} ₽`;
+const usd=(v,d=2)=>`$${(v||0).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d})}`;
+const intf=v=>Math.round(v||0).toLocaleString("ru-RU");
+
+// ---------- charts ----------
+function hourlyArea(avg,peak){
+ const W=760,H=240,PL=38,PR=12,PT=16,PB=26,pw=W-PL-PR,ph=H-PT-PB,maxv=Math.max(3,Math.ceil(Math.max(...avg)));
+ const x=i=>PL+i/23*pw, y=v=>PT+(1-v/maxv)*ph;
+ const pmax=Math.max(1,...peak), py=v=>PT+(1-v/pmax)*ph;
+ let line=avg.map((v,i)=>`${i?"L":"M"} ${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");
+ let area=`M ${x(0).toFixed(1)} ${(PT+ph).toFixed(1)} `+avg.map((v,i)=>`L ${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(" ")+` L ${x(23).toFixed(1)} ${(PT+ph).toFixed(1)} Z`;
+ let pl=peak.map((v,i)=>`${i?"L":"M"} ${x(i).toFixed(1)} ${py(v).toFixed(1)}`).join(" ");
+ let grid="";[1,2,3].filter(g=>g<=maxv).forEach(g=>{grid+=`<line class="grid" x1="${PL}" y1="${y(g).toFixed(1)}" x2="${W-PR}" y2="${y(g).toFixed(1)}"/><text class="ylab" x="${PL-6}" y="${(y(g)+3).toFixed(1)}">${g}</text>`;});
+ let xt="";for(let i=0;i<24;i+=3)xt+=`<text class="xlab" x="${x(i).toFixed(1)}" y="${H-8}">${String(i).padStart(2,"0")}</text>`;
+ let pi=avg.indexOf(Math.max(...avg));
+ let dot=`<circle class="dot" cx="${x(pi).toFixed(1)}" cy="${y(avg[pi]).toFixed(1)}" r="4.5"/><text class="dotlab" x="${x(pi).toFixed(1)}" y="${(y(avg[pi])-10).toFixed(1)}">${avg[pi]} · ${String(pi).padStart(2,"0")}:00</text>`;
+ return `<svg viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="none"><defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity="0.32"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>${grid}<path d="${area}" fill="url(#g1)"/><path class="peakline" d="${pl}"/><path class="aline" d="${line}"/>${dot}${xt}</svg>`;
+}
+function dailyBars(daily){
+ const W=760,H=210,PL=30,PR=8,PT=14,PB=24,pw=W-PL-PR,ph=H-PT-PB;
+ const vals=daily.map(d=>d.models),dmax=Math.max(4,...vals),n=daily.length,slot=pw/n,bw=slot*0.56;
+ let g="";[0.25,0.5,0.75,1].forEach(f=>{const gv=Math.round(dmax*f);const yy=PT+ph-gv/dmax*ph;g+=`<line class="grid" x1="${PL}" y1="${yy.toFixed(1)}" x2="${W-PR}" y2="${yy.toFixed(1)}"/><text class="ylab" x="${PL-5}" y="${(yy+3).toFixed(1)}">${gv}</text>`;});
+ const thr=Math.max(...vals)*0.72;
+ daily.forEach((d,k)=>{const x=PL+k*slot+(slot-bw)/2,h=d.models/dmax*ph,y=PT+ph-h;g+=`<rect class="bar${d.models>=thr?" hot":""}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2"/><text class="barval" x="${(x+bw/2).toFixed(1)}" y="${(y-5).toFixed(1)}">${d.models}</text><text class="xlab" x="${(x+bw/2).toFixed(1)}" y="${H-8}">${esc(d.date.slice(8,10))}</text>`;});
+ return `<svg viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="none">${g}</svg>`;
+}
+function heatStrip(avg){
+ const hm_=Math.max(...avg)||1;let c="";
+ avg.forEach((v,i)=>{const op=(0.12+0.88*(v/hm_)).toFixed(2);const out=v===Math.max(...avg)?' style="outline:1.5px solid var(--accent);border-radius:4px"':'';c+=`<div class="cell" title="${String(i).padStart(2,"0")}:00 · ${v}"><span style="opacity:${op}"${out}></span><b>${String(i).padStart(2,"0")}</b></div>`;});
+ return `<div class="heat">${c}</div>`;
+}
+const STCOLORS=["#4cc2ff","#2dd4bf","#ffb454","#a78bfa","#f472b6","#5ad19a"];
+function studioColor(st){const i=(SNAP&&SNAP.studios||[]).indexOf(st);return STCOLORS[(i<0?0:i)%STCOLORS.length];}
+function discColor(p){return p==null?"var(--faint)":p>=70?"var(--good)":p>=40?"var(--warn)":"var(--bad)";}
+function hbars(items,colorFn){
+ const mx=Math.max(1,...items.map(i=>i.value));
+ return `<div class="hbars">`+items.map(i=>`<div class="hbar"><div class="hbl" title="${esc(i.label)}">${esc(i.label)}</div><div class="hbtrack"><div class="hbfill" style="width:${(i.value/mx*100).toFixed(1)}%;background:${colorFn?colorFn(i):"var(--accent)"}"></div></div><div class="hbv num">${esc(i.sub!=null?i.sub:i.value)}</div></div>`).join("")+`</div>`;
+}
+function shareBar(parts){
+ const tot=parts.reduce((a,p)=>a+p.value,0)||1;
+ const seg=parts.filter(p=>p.value>0).map(p=>`<div class="shseg" style="width:${(p.value/tot*100).toFixed(1)}%;background:${p.color}" title="${esc(p.label)} ${(p.value/tot*100).toFixed(0)}%"></div>`).join("");
+ const leg=parts.map(p=>`<span class="shleg"><i style="background:${p.color}"></i>${esc(p.label)} <b>${(p.value/tot*100).toFixed(0)}%</b></span>`).join("");
+ return `<div class="shbar">${seg}</div><div class="shlegs">${leg}</div>`;
+}
+function progress(pct,color){const w=Math.max(0,Math.min(100,pct));return `<div class="pgt"><div class="pgf" style="width:${w.toFixed(0)}%;background:${color||"var(--accent)"}"></div></div>`;}
+function miniStack(parts){const tot=parts.reduce((a,p)=>a+p.value,0)||1;return `<div class="shbar" style="height:16px;margin:0">`+parts.filter(p=>p.value>0).map(p=>`<div class="shseg" style="width:${(p.value/tot*100).toFixed(1)}%;background:${p.color}" title="${esc(p.label)} ${p.value}"></div>`).join("")+`</div>`;}
+function periodBars(data,field,color,fmt){
+ const W=760,H=180,PL=8,PR=8,PT=20,PB=34,pw=W-PL-PR,ph=H-PT-PB;
+ const vals=data.map(d=>d[field]||0),mx=Math.max(1,...vals),n=data.length,slot=pw/n,bw=Math.min(60,slot*0.5);
+ let g="";
+ data.forEach((d,k)=>{const v=d[field]||0,x=PL+k*slot+(slot-bw)/2,h=v/mx*ph,y=PT+ph-h;
+  g+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="3" fill="${color}"/>`;
+  g+=`<text x="${(x+bw/2).toFixed(1)}" y="${(y-5).toFixed(1)}" class="barval" style="font-size:10px">${esc(fmt?fmt(v):v)}</text>`;
+  g+=`<text x="${(x+bw/2).toFixed(1)}" y="${H-10}" class="xlab">${esc(d.short||d.label)}</text>`;});
+ return `<svg viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="none">${g}</svg>`;
+}
+function spark(avg){
+ const W=240,H=54,m=Math.max(...avg)||1;const x=i=>i/23*W,y=v=>H-v/m*(H-6)-3;
+ const line=avg.map((v,i)=>`${i?"L":"M"} ${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");
+ const area=`M 0 ${H} `+avg.map((v,i)=>`L ${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(" ")+` L ${W} ${H} Z`;
+ return `<svg viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="none" style="height:54px"><defs><linearGradient id="gs" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity="0.3"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs><path d="${area}" fill="url(#gs)"/><path class="aline" style="stroke-width:2" d="${line}"/></svg>`;
+}
+
+// ---------- period helpers ----------
+function periodsForScope(){ // returns [labels] included in current payScope selection
+ if(!SNAP)return[];
+ if(state.payScope==="period")return[state.paySel];
+ return SNAP.periods.filter(l=>l.rsplit?false:l.split(" ")[0]===state.paySel); // month
+}
+function monthOf(label){return label.split(" ")[0];}
+function sumModelOver(mrec,labels){
+ let h=0,r=0,u=0,hasR=false;
+ mrec.periods.forEach(p=>{if(labels.includes(p.label)){h+=p.hours;u+=p.usd;if(p.rub!=null){r+=p.rub;hasR=true;}}});
+ return {hours:h,rub:hasR?r:null,usd:u};
+}
+// бонус привязан к периоду; пусто = текущий период (обратная совместимость)
+function bonusPeriod(b){return (b.period&&b.period.trim())||SNAP.current_period;}
+function bonusInScope(b,scope,sel){const bp=bonusPeriod(b);return scope==="period"?bp===sel:monthOf(bp)===sel;}
+function studioBonus(s,scope,sel){return (s.bonuses||[]).reduce((a,b)=>a+((b.amount&&bonusInScope(b,scope,sel))?b.amount:0),0);}
+
+// ---------- sections ----------
+function renderOverview(){
+ const o=SNAP.overview, on=SNAP.online, v=$("#view"); v.innerHTML="";
+ const mom = (o.mom_pct!=null)?o.mom_pct:null;
+ const kpis=[
+  ["Active studios",intf(o.active_studios),SNAP.studios.join(" · ")],
+  ["Models tracked",intf(o.models_tracked),"rostered across "+o.active_studios+" studios"],
+  [`<span class="dot-g"></span>Online now`,intf(o.online_now),o.online_now_list.slice(0,4).map(x=>esc(x.nick)).join(" · ")||"—"],
+  ["Hours · "+esc(o.month_name||""),`${Math.round(o.hours_month)}<small> h</small>`, mom==null?"collecting since start":`${mom>=0?"+":""}${mom}% vs ${esc(o.prev_month_name||"")}`],
+  ["To pay · period",`<span class="rub">${rub(o.to_pay_period.rub)}</span>`, o.to_pay_period.usd_all!=null?`≈ ${usd(o.to_pay_period.usd_all)} итого · ${(SNAP.fx||{}).usdrub?intf(SNAP.fx.usdrub)+" ₽/$":""}`:`${usd(o.to_pay_period.usd)}${o.to_pay_period.bonus?` + bonus ${rub(o.to_pay_period.bonus)}`:""}`],
+ ];
+ const kwrap=el("section","kpis");
+ kpis.forEach(k=>kwrap.appendChild(el("div","kpi",`<div class="k">${k[0]}</div><div class="v num">${k[1]}</div><div class="d">${k[2]}</div>`)));
+ v.appendChild(kwrap);
+
+ // второй ряд — больше статистики сверху
+ const mm=(SNAP.monthly||[]).find(x=>x.name===SNAP.current_month)||{};
+ const ses=(SNAP.sessions||{}).month||{};
+ const disc=(SNAP.discipline||{}).overall||{};
+ const stats2=[
+  ["Max online · month",intf(mm.max_online||0),"peak concurrent"],
+  ["Avg online",String(mm.avg_online||0),"mean concurrent"],
+  ["Peak hour",mm.peak_hour!=null?String(mm.peak_hour).padStart(2,"0")+":00":"—","busiest time MSK"],
+  ["Sessions · month",intf(ses.sessions||0),`avg ${hm(ses.avg_hours||0)} · max ${hm(ses.max_hours||0)}`],
+  ["On-time online %",disc.online_pct!=null?disc.online_pct+"%":"—",disc.no_show!=null?`${disc.no_show} no-show · ${disc.late} late`:"vs schedule"],
+ ];
+ const kwrap2=el("section","kpis");
+ stats2.forEach(k=>kwrap2.appendChild(el("div","kpi",`<div class="k">${k[0]}</div><div class="v num">${k[1]}</div><div class="d">${k[2]}</div>`)));
+ v.appendChild(kwrap2);
+
+ const cards=el("section","cards");
+ // payout by studio (current period)
+ let rows=SNAP.studios_detail.map(s=>`<tr><td class="stname">${esc(s.studio)}</td><td class="num">${hm(s.hours_period)}</td><td class="num rub">${s.rub_period?rub(s.rub_period):"—"}</td><td class="num usd">${usd(s.usd_period,0)}</td></tr>`).join("");
+ const g=SNAP.payout.grand;
+ const tbl=el("div","card",`<h3>Payout by studio · ${esc(SNAP.current_period||"")}</h3><div class="cap">₽ by shift norm · $ by monthly norm</div>
+  <table><thead><tr><th>Studio</th><th>Hours</th><th>₽</th><th>$</th></tr></thead><tbody>${rows}</tbody></table>
+  <div class="note">Period total across all months: <b class="rub">${rub(g.rub)}</b> + <b class="usd">${usd(g.usd)}</b> + bonus ${rub(g.bonus)} → <b>${rub(g.total_rub)}</b></div>`);
+ cards.appendChild(tbl);
+ // online snapshot
+ const onlist=on.online_now.map(x=>`<div class="row"><span>${esc(x.nick)}</span><span class="muted">${esc(x.studio)}</span></div>`).join("")||`<div class="muted">nobody online right now</div>`;
+ const oc=el("div","card",`<h3>Online now & rhythm</h3><div class="cap">avg concurrent by hour (MSK) · peak ${String(on.peak_hour).padStart(2,"0")}:00</div>
+  ${spark(on.avg_by_hour)}
+  <div style="margin-top:12px">${onlist}</div>`);
+ cards.appendChild(oc);
+ v.appendChild(cards);
+
+ // --- визуалка: лидерборды + доля студий ---
+ const topH=[...SNAP.models].sort((a,b)=>b.hours_total-a.hours_total).slice(0,5).map(m=>({label:m.nick,value:m.hours_total,sub:hm(m.hours_total)}));
+ const topU=[...SNAP.models].sort((a,b)=>(b.usd_period||0)-(a.usd_period||0)).slice(0,5).map(m=>({label:m.nick,value:m.usd_period||0,sub:usd(m.usd_period,0)}));
+ const share=SNAP.studios_detail.map(s=>({label:s.studio,value:s.hours_total,color:studioColor(s.studio)}));
+ const vcards=el("section","cards");
+ vcards.appendChild(el("div","card",`<h3>Top models · hours (month)</h3><div class="cap">who streams the most</div>${hbars(topH)}`));
+ vcards.appendChild(el("div","card",`<h3>Top models · $ (period)</h3><div class="cap">${esc(SNAP.current_period||"")}</div>${hbars(topU,()=>"var(--usd)")}`));
+ v.appendChild(vcards);
+ v.appendChild(el("div","card full",`<h3>Studio share · hours</h3><div class="cap">contribution to total airtime</div>${shareBar(share)}`));
+
+ // --- тренд выплат по периодам ---
+ const ptrend=SNAP.periods.map(lbl=>{let r=0,u=0;SNAP.payout.studios.forEach(s=>s.models.forEach(m=>m.periods.forEach(p=>{if(p.label===lbl){u+=p.usd;if(p.rub)r+=p.rub;}})));return {label:lbl,short:lbl.replace("Октябрь","Окт").replace("Ноябрь","Ноя").replace("Декабрь","Дек"),rub:Math.round(r),usd:Math.round(u)};});
+ v.appendChild(el("div","card full",`<h3>Payout trend · ₽ by period</h3><div class="cap">accrued rubles per payout period (shift norm)</div>${periodBars(ptrend,"rub","var(--rub)",v=>intf(v))}
+  <div class="legend"><span><i style="background:var(--rub)"></i>₽ accrued</span></div>`));
+
+ // month-end forecast
+ const f=o.forecast;
+ if(f){
+  v.appendChild(el("div","card full",`<h3>Month-end forecast · ${esc(o.month_name||"")}</h3><div class="cap">linear projection · ${Math.round(f.fraction*100)}% of month elapsed · ${f.days_left} days left · estimate</div>
+   <div class="fc">
+    <div class="fcitem"><div class="k">Projected hours</div><div class="v num">${intf(f.hours)}<small> h</small></div><div class="d">now ${intf(f.mtd_hours)} h</div></div>
+    <div class="fcitem"><div class="k">Projected ₽</div><div class="v num rub">${rub(f.rub)}</div><div class="d">now ${rub(f.mtd_rub)}</div></div>
+    <div class="fcitem"><div class="k">Projected $</div><div class="v num usd">${usd(f.usd,0)}</div><div class="d">now ${usd(f.mtd_usd,0)}</div></div>
+    <div class="fcitem"><div class="k">Projected to pay ₽</div><div class="v num">${rub(f.total_rub)}</div><div class="d">+ bonus ${rub(f.bonus)}</div></div>
+   </div>`));
+ }
+ // needs attention — компактно, внизу
+ if(SNAP.attention&&SNAP.attention.length){
+  const sevc={3:"bad",2:"warn",1:"info"};
+  const top=SNAP.attention.slice(0,6);
+  const items=top.map(a=>`<div class="attrow"><span class="dotx ${sevc[a.sev]||"info"}"></span><b>${esc([a.studio!=="—"?a.studio:"",a.nick].filter(Boolean).join(" · "))}</b><span class="atext">${esc(a.text)}</span></div>`).join("");
+  const more=SNAP.attention.length>6?`<div class="muted" style="margin-top:8px;font-size:12px">+${SNAP.attention.length-6} ещё — см. Discipline</div>`:"";
+  v.appendChild(el("div","card full attn",`<h3>Needs attention · ${SNAP.attention.length}</h3><div class="attlist">${items}</div>${more}`));
+ }
+}
+
+function renderOnline(){
+ const v=$("#view"); v.innerHTML="";
+ // --- месячная сводка ---
+ const months=SNAP.monthly||[];
+ if(months.length){
+  if(!state.onlineMonth||!months.find(m=>m.name===state.onlineMonth))
+   state.onlineMonth=(months.find(m=>m.name===SNAP.current_month)?SNAP.current_month:months[months.length-1].name);
+  const mctl=el("div","controls");
+  const mchips=el("div","chips");
+  months.forEach(m=>{const c=el("button","chip"+(m.name===state.onlineMonth?" on":""),esc(m.name));c.onclick=()=>{state.onlineMonth=m.name;renderOnline();};mchips.appendChild(c);});
+  mctl.appendChild(mchips); v.appendChild(mctl);
+  const mm=months.find(m=>m.name===state.onlineMonth);
+  if(mm){
+   v.appendChild(el("div","cap2",`<b>${esc(mm.name)}</b> — monthly stats · ${mm.days} days with data`));
+   const tiles=[
+    ["Hours total",`${Math.round(mm.hours)}<small> h</small>`],
+    ["Active models",intf(mm.active_models)],
+    ["Max online",intf(mm.max_online)],
+    ["Avg online",mm.avg_online],
+    ["Peak hour",`${String(mm.peak_hour).padStart(2,"0")}:00`],
+    ["Busiest day",`${mm.busiest_day_peak}<small> · ${esc((mm.busiest_day||"").slice(5))}</small>`],
+   ];
+   const kw=el("div","kpis m6");
+   tiles.forEach(t=>kw.appendChild(el("div","kpi",`<div class="k">${t[0]}</div><div class="v num">${t[1]}</div>`)));
+   v.appendChild(kw);
+  }
+ }
+ const st=state.onlineStudio;
+ const src = st==="all" ? {avg:SNAP.online.avg_by_hour,daily:SNAP.online.daily}
+            : {avg:(SNAP.online.by_studio[st]||{}).avg_by_hour||Array(24).fill(0),
+               daily:(SNAP.online.by_studio[st]||{}).daily||SNAP.online.daily.map(d=>({date:d.date,models:0}))};
+ // controls
+ const ctl=el("div","controls");
+ const chips=el("div","chips");
+ ["all",...SNAP.studios].forEach(s=>{const c=el("button","chip"+(s===st?" on":""),s==="all"?"All studios":esc(s));c.onclick=()=>{state.onlineStudio=s;renderOnline();};chips.appendChild(c);});
+ ctl.appendChild(chips); v.appendChild(ctl);
+
+ const c1=el("div","card full",`<h3>Average models online by hour${st!=="all"?" · "+esc(st):""}</h3><div class="cap">mean concurrent on /live · MSK</div>${hourlyArea(src.avg,st==="all"?SNAP.online.peak_by_hour:src.avg.map(x=>Math.ceil(x)))}<div class="legend"><span><i style="background:var(--accent)"></i>avg concurrent</span>${st==="all"?'<span><i style="background:var(--faint)"></i>peak (scaled)</span>':""}</div>`);
+ v.appendChild(c1);
+ const c2=el("div","card full",`<h3>Unique models online per day${st!=="all"?" · "+esc(st):""}</h3><div class="cap">${esc(SNAP.online.daily[0]?.date||"")} – ${esc((SNAP.online.daily.at(-1)||{}).date||"")}</div>${dailyBars(src.daily)}<div class="legend"><span><i style="background:var(--accent)"></i>busy day</span><span><i style="background:#2b3442"></i>normal</span></div>`);
+ v.appendChild(c2);
+ const avg=src.avg, pi=avg.indexOf(Math.max(...avg)), qi=avg.indexOf(Math.min(...avg.filter(x=>x>0).length?avg:[0]));
+ const maxDay=[...SNAP.online.daily].sort((a,b)=>b.peak-a.peak)[0]||{};
+ const c3=el("div","card full",`<h3>Peak activity by hour${st!=="all"?" · "+esc(st):""}</h3><div class="cap">darker = more models online · outlined = peak</div>${heatStrip(avg)}
+  <div class="peaks"><div class="peakchip"><div class="t">Peak hour</div><div class="b">${String(pi).padStart(2,"0")}:00 · ${avg[pi]}</div></div>
+  <div class="peakchip"><div class="t">Quietest</div><div class="b">${String(qi).padStart(2,"0")}:00 · ${avg[qi]}</div></div>
+  <div class="peakchip"><div class="t">Single-day max</div><div class="b">${maxDay.peak||0} · ${esc((maxDay.date||"").slice(5))}</div></div></div>`);
+ v.appendChild(c3);
+ // sessions (this month)
+ const ses=(SNAP.sessions||{}).month||{};
+ v.appendChild(el("div","card full",`<h3>Stream sessions · this month</h3><div class="cap">continuous streams · from stream-start / last-active timestamps</div>
+  <div class="fc">
+   <div class="fcitem"><div class="k">Sessions</div><div class="v num">${intf(ses.sessions||0)}</div></div>
+   <div class="fcitem"><div class="k">Avg length</div><div class="v num">${hm(ses.avg_hours||0)}</div></div>
+   <div class="fcitem"><div class="k">Longest</div><div class="v num">${hm(ses.max_hours||0)}</div></div>
+   <div class="fcitem"><div class="k">Total stream hours</div><div class="v num">${intf(ses.total_hours||0)}<small> h</small></div></div>
+  </div>`));
+ // weekday × hour heatmap
+ const wh=SNAP.online.weekday_hour||[];
+ if(wh.length){
+  const wdN=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const mx=Math.max(1,...wh.flat());
+  let grid=`<div class="whgrid"><div class="whcorner"></div>`;
+  for(let h=0;h<24;h++)grid+=`<div class="whh">${h%3===0?String(h).padStart(2,"0"):""}</div>`;
+  wh.forEach((rowv,wd)=>{grid+=`<div class="whd">${wdN[wd]}</div>`+rowv.map((val,h)=>`<div class="whc" title="${wdN[wd]} ${String(h).padStart(2,"0")}:00 · ${val}"><span style="opacity:${(0.07+0.93*val/mx).toFixed(2)}"></span></div>`).join("");});
+  grid+="</div>";
+  v.appendChild(el("div","card full",`<h3>Coverage by weekday × hour</h3><div class="cap">avg concurrent online · darker = busier · MSK</div>${grid}`));
+ }
+}
+
+function renderDiscipline(){
+ const v=$("#view"); v.innerHTML="";
+ const d=SNAP.discipline||{};
+ if(d.error||!d.overall){
+  v.appendChild(el("div","banner",`Discipline (plan vs fact) needs the schedule sheets. ${d.error?"Note: "+esc(d.error):"No shifts found for this period yet."}`));
+  return;
+ }
+ const o=d.overall;
+ v.appendChild(el("div","cap2",`Plan vs fact · period <b>${esc(SNAP.current_period||"")}</b> · ${d.shifts} shifts`));
+ const tiles=[
+  ["Shifts planned",intf(o.planned)],
+  ["Came",intf(o.came)],
+  ["No-show",intf(o.no_show)],
+  ["Late",intf(o.late)],
+  ["Left early",intf(o.early)],
+  ["Online % of shift",o.online_pct!=null?o.online_pct+"%":"—"],
+ ];
+ const kw=el("div","kpis m6");
+ tiles.forEach(t=>kw.appendChild(el("div","kpi",`<div class="k">${t[0]}</div><div class="v num">${t[1]}</div>`)));
+ v.appendChild(kw);
+ // compliance by studio (visual)
+ const comp=(d.studios||[]).map(s=>{
+  const parts=[{label:"came",value:s.came,color:"var(--good)"},{label:"no-show",value:s.no_show,color:"var(--bad)"},{label:"other",value:Math.max(0,s.planned-s.came-s.no_show),color:"var(--line)"}];
+  return `<div style="margin-bottom:13px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><b>${esc(s.studio)}</b><span class="muted">came ${s.came}/${s.planned} · late ${s.late} · online <b style="color:${discColor(s.online_pct)}">${s.online_pct!=null?s.online_pct+"%":"—"}</b></span></div>${miniStack(parts)}</div>`;}).join("");
+ v.appendChild(el("div","card full",`<h3>Compliance by studio</h3><div class="cap">came vs no-show per planned shifts · <span style="color:var(--good)">came</span> / <span style="color:var(--bad)">no-show</span> / <span style="color:var(--mut)">other</span></div>${comp}`));
+ // by studio
+ const srows=(d.studios||[]).map(s=>`<tr><td class="stname">${esc(s.studio)}</td><td class="num">${intf(s.planned)}</td><td class="num">${intf(s.came)}</td><td class="num ${s.no_show?"warnv":""}">${intf(s.no_show)}</td><td class="num">${intf(s.late)}</td><td class="num">${intf(s.early)}</td><td class="num" style="color:${discColor(s.online_pct)};font-weight:700">${s.online_pct!=null?s.online_pct+"%":"—"}</td></tr>`).join("");
+ v.appendChild(el("div","card full",`<h3>By studio</h3>
+  <table><thead><tr><th>Studio</th><th>Planned</th><th>Came</th><th>No-show</th><th>Late</th><th>Early</th><th>Online %</th></tr></thead><tbody>${srows}</tbody></table>`));
+ // by model (problems first)
+ const mrows=(d.models||[]).map(m=>`<tr><td class="stname">${esc(m.nick)}</td><td class="muted">${esc(m.studio)}</td><td class="num">${intf(m.planned)}</td><td class="num">${intf(m.came)}</td><td class="num ${m.no_show?"warnv":""}">${intf(m.no_show)}</td><td class="num">${intf(m.late)}</td><td class="num">${intf(m.early)}</td><td class="num" style="color:${discColor(m.online_pct)};font-weight:700">${m.online_pct!=null?m.online_pct+"%":"—"}</td></tr>`).join("");
+ v.appendChild(el("div","card full",`<h3>By model</h3><div class="cap">problems first · no-show / late / left-early · online % of observed shift</div>
+  <table><thead><tr><th>Model</th><th>Studio</th><th>Planned</th><th>Came</th><th>No-show</th><th>Late</th><th>Early</th><th>Online %</th></tr></thead><tbody>${mrows}</tbody></table>`));
+}
+
+function renderStudios(){
+ const v=$("#view"); v.innerHTML="";
+ v.appendChild(el("div","card full",`<h3>Studio terms &amp; norms</h3><div class="cap">how each studio is paid and its norms · set in the payout sheet (yellow cells), read live every 5 min</div>`));
+ const grid=el("div","grid3");
+ SNAP.studios_detail.forEach(s=>{
+  const r=s.rates, night=!s.kira && r.sNn && r.sNn!=r.sN;
+  const rubPerH=s.kira?null:Math.round(r.rub/(r.sN||1)), rubPerHn=night?Math.round(r.rub/r.sNn):null;
+  const cap=(!s.kira && r.cap)?r.cap:null;
+  // наглядная схема расчёта: формула + подставленный пример за текущий период
+  const exH=s.hours_period||0;
+  const capF=cap?` <span class="op">→ макс</span> <span class="rub">${intf(cap)} ₽/день</span>`:"";
+  const fRub=s.kira?"":((night
+    ? `<span class="lbl">₽</span> <span class="op">=</span> ( день ÷ <b>${r.sN}</b> <span class="op">+</span> ночь<span class="op">(23–8)</span> ÷ <b>${r.sNn}</b> ) <span class="op">×</span> <span class="rub">${intf(r.rub)} ₽</span>`
+    : `<span class="lbl">₽</span> <span class="op">=</span> часы ÷ <b>${r.sN}</b> <span class="op">×</span> <span class="rub">${intf(r.rub)} ₽</span>`)+capF);
+  const fUsd=`<span class="lbl">$</span> <span class="op">=</span> часы ÷ <b>${r.mN}</b> <span class="op">×</span> <span class="usd">$${r.usd}</span>`;
+  const perHrub=s.kira?"":((night?`≈ ${intf(rubPerH)} ₽/ч днём · ${intf(rubPerHn)} ₽/ч ночью`:`≈ ${intf(rubPerH)} ₽/ч`)+(cap?`, кап ${intf(cap)} ₽/день`:""));
+  const schemeExample=s.kira
+    ? `Пример · период: ${hm(exH)} → <span class="usd">${usd(s.usd_period,0)}</span>`
+    : `Пример · период: ${hm(exH)} → <span class="rub">${s.rub_period?rub(s.rub_period):"—"}</span> <span class="op">+</span> <span class="usd">${usd(s.usd_period,0)}</span>`;
+  const scheme=`<div class="scheme"><div class="sh">Схема расчёта выплаты</div><div class="f">${s.kira?"":fRub+"<br>"}${fUsd}</div><div class="ex">${s.kira?"Платим только $. ":(perHrub+". ")}Часы = всё время онлайн (airtime), МСК. ${schemeExample}</div></div>`;
+  const terms=s.kira
+    ? [["Monthly norm",`${r.mN} h`],["$ per month",`$${r.usd}`]]
+    : night
+    ? [["Day shift norm",`${r.sN} h`],["Night shift norm",`${r.sNn} h`],["₽ per shift",`${intf(r.rub)} ₽`],["≈ ₽/h day · night",`${intf(rubPerH)} · ${intf(rubPerHn)} ₽`],["Monthly norm",`${r.mN} h`],["$ per month",`$${r.usd}`]]
+    : [["Shift norm",`${r.sN} h`],["₽ per shift",`${intf(r.rub)} ₽`],["≈ ₽ per hour",`${intf(rubPerH)} ₽`],...(cap?[["Daily cap ₽",`${intf(cap)} ₽`]]:[]),["Monthly norm",`${r.mN} h`],["$ per month",`$${r.usd}`]];
+  const termRows=terms.map(t=>`<div class="row"><span>${t[0]}</span><span class="num">${t[1]}</span></div>`).join("");
+  const bPer=studioBonus(s,"period",SNAP.current_period);      // бонус за текущий период
+  const toPayPer=(s.kira?0:(s.rub_period||0))+bPer;            // к выплате ₽ за текущий период
+  grid.appendChild(el("div","stcard",`
+   <h4>${esc(s.studio)} <span class="pill ${s.active_count?"g":"off"}">${s.active_count}/${s.models_count} active</span></h4>
+   <div class="termbox">${termRows}</div>
+   ${scheme}
+   <div class="row"><span>Hours · period</span><span class="num">${hm(s.hours_period)}</span></div>
+   <div class="row"><span>Hours · total</span><span class="num">${hm(s.hours_total)}</span></div>
+   ${s.kira?"":`<div class="row"><span>₽ · period</span><span class="num rub">${s.rub_period?rub(s.rub_period):"—"}</span></div>`}
+   <div class="row"><span>$ · period</span><span class="num usd">${usd(s.usd_period,0)}</span></div>
+   ${bPer?`<div class="row"><span>Bonus · period</span><span class="num rub">${rub(bPer)}</span></div>`:""}
+   <div class="row"><span>To pay · period</span><span class="num">${toPayPer?rub(toPayPer):"—"}</span></div>`));
+ });
+ v.appendChild(grid);
+}
+
+function renderModels(){
+ const v=$("#view"); v.innerHTML="";
+ const ctl=el("div","controls");
+ const sel=el("select");sel.innerHTML=`<option value="all">All studios</option>`+SNAP.studios.map(s=>`<option value="${esc(s)}"${s===state.modelStudio?" selected":""}>${esc(s)}</option>`).join("");
+ sel.value=state.modelStudio;sel.onchange=()=>{state.modelStudio=sel.value;renderModels();};
+ const q=el("input");q.type="search";q.placeholder="search model…";q.value=state.modelQ;q.oninput=()=>{state.modelQ=q.value;renderModelsRows();};
+ ctl.appendChild(sel);ctl.appendChild(q);
+ const scope=el("div","muted");scope.style.marginLeft="auto";scope.textContent="period: "+(SNAP.current_period||"");
+ ctl.appendChild(scope);
+ v.appendChild(ctl);
+ const card=el("div","card full");card.id="mcard";v.appendChild(card);
+ renderModelsRows();
+}
+function renderModelsRows(){
+ const card=$("#mcard");if(!card)return;
+ if(!state.modelSort)state.modelSort={key:"hours_period",dir:-1};
+ const mnBy={}; (SNAP.studios_detail||[]).forEach(s=>mnBy[s.studio]=(s.rates&&s.rates.mN)||96);
+ let ms=SNAP.models.filter(m=>(state.modelStudio==="all"||m.studio===state.modelStudio)&&(!state.modelQ||m.nick.toLowerCase().includes(state.modelQ.toLowerCase())))
+   .map(m=>({...m,_norm:mnBy[m.studio]?Math.round(m.hours_total/mnBy[m.studio]*100):0}));
+ const {key,dir}=state.modelSort;
+ ms.sort((a,b)=>{let x=a[key],y=b[key];if(typeof x==="string"){x=(x||"").toLowerCase();y=(y||"").toLowerCase();return x<y?-dir:x>y?dir:0;}return ((x||0)-(y||0))*dir;});
+ const now=Date.now();
+ const cols=[["nick","Model",1],["studio","Studio",1],["active","Status",1],["hours_period","H · period",0],["hours_total","H · total",0],["_norm","Norm %",0],["rub_period","₽",0],["usd_period","$",0],["last_online","Last online",0]];
+ const thead=cols.map(c=>`<th class="srt" data-k="${c[0]}">${c[1]}${key===c[0]?(dir<0?" ↓":" ↑"):""}</th>`).join("");
+ const rows=ms.map(m=>{
+  const lastTxt=m.last_online?relTime(now-m.last_online):"—";
+  const nc=m._norm>=100?"var(--good)":m._norm>=60?"var(--accent)":"var(--warn)";
+  return `<tr class="mrow" data-nick="${esc(m.nick)}" data-studio="${esc(m.studio)}"><td class="stname">${esc(m.nick)}</td><td class="muted">${esc(m.studio)}</td>
+   <td>${m.active?'<span class="pill g">active</span>':'<span class="pill off">idle</span>'}</td>
+   <td class="num">${hm(m.hours_period)}</td><td class="num">${hm(m.hours_total)}</td>
+   <td><div class="normcell">${progress(m._norm,nc)}<span class="muted num" style="font-size:10.5px">${m._norm}%</span></div></td>
+   <td class="num rub">${m.rub_period!=null?rub(m.rub_period):"—"}</td><td class="num usd">${usd(m.usd_period,0)}</td>
+   <td class="muted num">${lastTxt}</td></tr>`;}).join("");
+ card.innerHTML=`<h3>Models · ${ms.length}</h3><div class="cap">click a model for details · click a header to sort</div>
+  <table><thead><tr>${thead}</tr></thead><tbody>${rows}</tbody></table>`;
+ card.querySelectorAll("th.srt").forEach(th=>th.onclick=()=>{const k=th.dataset.k;state.modelSort=(key===k)?{key:k,dir:-dir}:{key:k,dir:(k==="nick"||k==="studio")?1:-1};renderModelsRows();});
+ card.querySelectorAll("tr.mrow").forEach(tr=>tr.onclick=()=>openModel(tr.dataset.nick,tr.dataset.studio));
+}
+function relTime(ms){const m=Math.round(ms/60000);if(m<2)return"just now";if(m<60)return m+"m ago";const h=Math.round(m/60);if(h<24)return h+"h ago";return Math.round(h/24)+"d ago";}
+function agoTxt(min){if(min<60)return `${min} мин назад`;const h=Math.floor(min/60),m=min%60;return `${h} ч ${m} мин назад`;}
+
+function openModel(nick,studio){
+ const m=SNAP.models.find(x=>x.nick===nick&&x.studio===studio);if(!m)return;
+ const st=(SNAP.payout.studios||[]).find(s=>s.studio===studio);
+ const pm=st&&st.models.find(x=>x.nick===nick);
+ const disc=((SNAP.discipline||{}).models||[]).find(x=>x.nick===nick&&x.studio===studio);
+ const now=Date.now();
+ const perRows=pm?pm.periods.map(p=>`<tr><td>${esc(p.label)}</td><td class="num">${hm(p.hours)}</td><td class="num rub">${p.rub!=null?rub(p.rub):"—"}</td><td class="num usd">${usd(p.usd,0)}</td></tr>`).join(""):"";
+ $("#modalbox").innerHTML=`<button class="mclose" id="mclose">✕</button>
+  <h3 style="margin:0 0 4px">${esc(nick)} <span class="muted" style="font-weight:400">· ${esc(studio)}</span></h3>
+  <div class="mmeta">${m.active?'<span class="pill g">active</span>':'<span class="pill off">idle</span>'} · last online ${m.last_online?relTime(now-m.last_online):"—"} · total ${hm(m.hours_total)}</div>
+  <h4 class="msub">Payout by period</h4>
+  <table><thead><tr><th>Period</th><th>Hours</th><th>₽</th><th>$</th></tr></thead><tbody>${perRows||'<tr><td colspan="4" class="muted">no data</td></tr>'}</tbody></table>
+  ${disc?`<h4 class="msub">Discipline · ${esc(SNAP.current_period||"")}</h4><div class="mmeta">planned ${disc.planned} · came ${disc.came} · no-show ${disc.no_show} · late ${disc.late} · left early ${disc.early} · online ${disc.online_pct!=null?disc.online_pct+"%":"—"}</div>`:""}`;
+ $("#modal").classList.remove("hidden");
+ $("#mclose").onclick=closeModel;
+}
+function closeModel(){$("#modal").classList.add("hidden");}
+
+function renderPayroll(){
+ const v=$("#view"); v.innerHTML="";
+ const ctl=el("div","controls");
+ const seg=el("div","seg",`<button class="${state.payScope==="period"?"on":""}" data-s="period">By period</button><button class="${state.payScope==="month"?"on":""}" data-s="month">By month</button>`);
+ seg.querySelectorAll("button").forEach(b=>b.onclick=()=>{state.payScope=b.dataset.s;state.paySel=null;renderPayroll();});
+ ctl.appendChild(seg);
+ const opts = state.payScope==="period"?SNAP.periods:SNAP.months;
+ const dflt = state.payScope==="period"?SNAP.current_period:SNAP.current_month;
+ if(!state.paySel||!opts.includes(state.paySel))state.paySel=opts.includes(dflt)?dflt:opts.at(-1);
+ const sel=el("select");sel.innerHTML=opts.map(o=>`<option${o===state.paySel?" selected":""}>${esc(o)}</option>`).join("");
+ sel.value=state.paySel;sel.onchange=()=>{state.paySel=sel.value;renderPayroll();};
+ ctl.appendChild(sel);
+ v.appendChild(ctl);
+
+ const labels = state.payScope==="period"?[state.paySel]:SNAP.periods.filter(l=>monthOf(l)===state.paySel);
+ // studio totals
+ let T={h:0,r:0,u:0,b:0};
+ const srows=SNAP.payout.studios.map(s=>{
+  let h=0,r=0,u=0,hasR=false;
+  s.models.forEach(m=>{const x=sumModelOver(m,labels);h+=x.hours;u+=x.usd;if(x.rub!=null){r+=x.rub;hasR=true;}});
+  const bonus = studioBonus(s, state.payScope, state.paySel);
+  T.h+=h;T.r+=hasR?r:0;T.u+=u;T.b+=bonus;
+  return `<tr><td class="stname">${esc(s.studio)}</td><td class="num">${hm(h)}</td><td class="num rub">${hasR?rub(r):"—"}</td><td class="num usd">${usd(u,0)}</td><td class="num rub">${bonus?rub(bonus):"—"}</td><td class="num">${rub((hasR?r:0)+bonus)}</td></tr>`;
+ }).join("");
+ const prate=(SNAP.fx||{}).usdrub, pUsdAll=prate?(T.u+(T.r+T.b)/prate):null;
+ const card=el("div","card full",`<h3>To pay · ${esc(state.paySel||"")}</h3><div class="cap">how much and to whom · ₽ by shift norm, $ by monthly norm, + manual bonuses</div>
+  <table><thead><tr><th>Studio</th><th>Hours</th><th>₽</th><th>$</th><th>Bonus</th><th>Total ₽</th></tr></thead><tbody>${srows}</tbody>
+  <tfoot><tr><td>Total</td><td class="num">${hm(T.h)}</td><td class="num rub">${rub(T.r)}</td><td class="num usd">${usd(T.u,0)}</td><td class="num rub">${T.b?rub(T.b):"—"}</td><td class="num">${rub(T.r+T.b)}</td></tr></tfoot></table>
+  ${pUsdAll!=null?`<div class="note">≈ <b class="usd">${usd(pUsdAll)}</b> итого в долларах (платим в $) · курс ${intf(prate)} ₽/$ онлайн</div>`:""}`);
+ v.appendChild(card);
+
+ // per-model detail (sortable)
+ let mall=[];
+ SNAP.payout.studios.forEach(s=>s.models.forEach(m=>{const x=sumModelOver(m,labels);if(x.hours>0.01)mall.push({nick:m.nick,studio:s.studio,hours:x.hours,rub:x.rub,usd:x.usd});}));
+ const pk=state.paySort.key,pd=state.paySort.dir;
+ mall.sort((a,b)=>{let x=a[pk],y=b[pk];if(typeof x==="string"){x=(x||"").toLowerCase();y=(y||"").toLowerCase();return x<y?-pd:x>y?pd:0;}return ((x||0)-(y||0))*pd;});
+ const pcols=[["nick","Model"],["studio","Studio"],["hours","Hours"],["rub","₽"],["usd","$"]];
+ const pthead=pcols.map(c=>`<th class="srt" data-k="${c[0]}">${c[1]}${pk===c[0]?(pd<0?" ↓":" ↑"):""}</th>`).join("");
+ const pmrows=mall.map(m=>`<tr><td class="stname">${esc(m.nick)}</td><td class="muted">${esc(m.studio)}</td><td class="num">${hm(m.hours)}</td><td class="num rub">${m.rub!=null?rub(m.rub):"—"}</td><td class="num usd">${usd(m.usd,0)}</td></tr>`).join("");
+ const bmCard=el("div","card full",`<h3>By model · ${esc(state.paySel||"")}</h3><div class="cap">${mall.length} models with airtime in this scope · click a header to sort</div>
+  <table><thead><tr>${pthead}</tr></thead><tbody>${pmrows}</tbody></table>`);
+ v.appendChild(bmCard);
+ bmCard.querySelectorAll("th.srt").forEach(th=>th.onclick=()=>{const k=th.dataset.k;state.paySort=(pk===k)?{key:k,dir:-pd}:{key:k,dir:(k==="nick"||k==="studio")?1:-1};renderPayroll();});
+ // bonuses
+ const allb=[];SNAP.payout.studios.forEach(s=>(s.bonuses||[]).forEach(b=>{if(b.amount)allb.push({studio:s.studio,...b});}));
+ if(allb.length)v.appendChild(el("div","card full",`<h3>Bonuses ₽ · manual</h3><table><thead><tr><th>Studio</th><th>Recipient</th><th>₽</th><th>Comment</th><th>Период</th></tr></thead><tbody>${allb.map(b=>`<tr><td class="stname">${esc(b.studio)}</td><td>${esc(b.who)}</td><td class="num rub">${rub(b.amount)}</td><td class="muted">${esc(b.comment)}</td><td class="muted">${esc(bonusPeriod(b))}</td></tr>`).join("")}</tbody></table>`));
+}
+
+function hourBars(arr){
+ const W=760,H=160,PL=24,PR=8,PT=16,PB=24,pw=W-PL-PR,ph=H-PT-PB,mx=Math.max(1,...arr),n=arr.length,slot=pw/Math.max(1,n),bw=Math.min(40,slot*0.6);
+ let g="";arr.forEach((v,i)=>{const x=PL+i*slot+(slot-bw)/2,h=v/mx*ph,y=PT+ph-h;g+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="2" fill="var(--accent)"/>`;if(i%3===0)g+=`<text x="${(x+bw/2).toFixed(1)}" y="${H-8}" class="xlab">${String(i).padStart(2,"0")}</text>`;});
+ return `<svg viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="none">${g}</svg>`;
+}
+function renderLive(){
+ const v=$("#view"); v.innerHTML="";
+ const on=SNAP.online,td=on.today||{},now=Date.now();
+ const dh=td.hours||0,avg=td.avg_daily||0,delta=avg?Math.round((dh-avg)/avg*100):null;
+ const tiles=[
+  [`<span class="dot-g"></span>Online now`,intf(on.online_now_count||0)],
+  ["Hours today",hm(dh)],
+  ["vs usual day",delta==null?"—":`${delta>=0?"+":""}${delta}%`],
+  ["Peak today",intf(td.peak||0)],
+  ["Models today",intf(td.models||0)],
+  ["Avg day",hm(avg)],
+ ];
+ const kw=el("div","kpis m6");
+ tiles.forEach(t=>kw.appendChild(el("div","kpi",`<div class="k">${t[0]}</div><div class="v num">${t[1]}</div>`)));
+ v.appendChild(kw);
+ const rows=(on.online_now||[]).map(x=>{const dur=x.since?hm((now-x.since)/3600000):"—";return `<tr><td class="stname">${esc(x.nick)}</td><td class="muted">${esc(x.studio)}</td><td class="num">${dur}</td></tr>`;}).join("")||`<tr><td colspan="3" class="muted">никого онлайн сейчас</td></tr>`;
+ v.appendChild(el("div","card full",`<h3>Online now · ${on.online_now_count||0}</h3><div class="cap">в эфире прямо сейчас · сколько уже стримит · обновляется ~30с</div>
+  <table><thead><tr><th>Model</th><th>Studio</th><th>Streaming for</th></tr></thead><tbody>${rows}</tbody></table>`));
+ const tbh=td.by_hour||[];
+ if(tbh.length)v.appendChild(el("div","card full",`<h3>Today · online by hour</h3><div class="cap">до ${String(td.hour||0).padStart(2,"0")}:00 МСК</div>${hourBars(tbh)}`));
+ clearTimeout(window._live);window._live=setTimeout(()=>{if(state.section==="live")renderLive();},30000);
+}
+
+function buildReportCard(studio,period){
+ const s=(SNAP.payout.studios||[]).find(x=>x.studio===studio)||{models:[],rates:{},kira:false,bonus:0};
+ const disc=((SNAP.discipline||{}).models||[]);
+ const kira=s.kira;
+ let models=s.models.map(m=>{const x=m.periods.find(p=>p.label===period)||{hours:0,rub:null,usd:0};const d=disc.find(z=>z.studio===studio&&z.nick===m.nick);return {nick:m.nick,hours:x.hours,rub:x.rub,usd:x.usd,no_show:d?d.no_show:null,online:d?d.online_pct:null};}).filter(m=>m.hours>0.01||(m.no_show||0)>0);
+ models.sort((a,b)=>b.hours-a.hours);
+ let th=0,tr=0,tu=0;models.forEach(m=>{th+=m.hours;tu+=m.usd;if(m.rub)tr+=m.rub;});
+ const bonus=s.bonus||0,rate=(SNAP.fx||{}).usdrub,usdAll=rate?(tu+(tr+bonus)/rate):null;
+ const rows=models.map((m,i)=>`<tr><td class="num muted">${i+1}</td><td class="stname">${esc(m.nick)}</td><td class="num">${hm(m.hours)}</td>${kira?"":`<td class="num rub">${m.rub!=null?rub(m.rub):"—"}</td>`}<td class="num usd">${usd(m.usd,0)}</td><td class="num" style="color:${discColor(m.online)}">${m.online!=null?m.online+"%":"—"}</td><td class="num ${m.no_show?"warnv":""}">${m.no_show||0}</td></tr>`).join("");
+ const card=el("div","card full report");
+ card.innerHTML=`<div class="rephead">
+   <div><h2 style="margin:0;font-size:22px">Camble · ${esc(studio)}</h2><div class="muted" style="font-size:12.5px">Отчёт за период <b>${esc(period)}</b> · МСК · сформировано ${esc(SNAP.generated_label||"")}</div></div>
+   <div class="repbig"><div class="muted" style="font-size:11px">К выплате</div>${kira?"":`<div class="num rub" style="font-size:21px;font-weight:800">${rub(tr+bonus)}</div>`}<div class="num usd" style="font-size:21px;font-weight:800">${usd(tu)}</div>${usdAll!=null?`<div class="muted" style="font-size:11px">≈ ${usd(usdAll)} итого @ ${intf(rate)} ₽/$</div>`:""}</div></div>
+  <table class="reptable"><thead><tr><th>#</th><th>Модель</th><th>Часы</th>${kira?"":"<th>₽</th>"}<th>$</th><th>Онлайн%</th><th>Невых.</th></tr></thead>
+   <tbody>${rows||'<tr><td colspan="7" class="muted">нет данных за период</td></tr>'}</tbody>
+   <tfoot><tr><td></td><td>Итого · ${models.length}</td><td class="num">${hm(th)}</td>${kira?"":`<td class="num rub">${rub(tr)}</td>`}<td class="num usd">${usd(tu)}</td><td></td><td></td></tr></tfoot></table>
+  ${bonus?`<div class="muted" style="margin-top:6px;font-size:12px">Бонусы (вручную): ${rub(bonus)}</div>`:""}
+  <div class="repnote">${kira?`$ = часы ÷ мес. норма (${s.rates.mN||"—"} ч) × $${s.rates.usd||0} · платим только $`:`₽ = часы ÷ норма смены (${s.rates.sN||"—"} ч) × ${intf(s.rates.rub||0)} ₽ · $ = часы ÷ мес. норма (${s.rates.mN||"—"} ч) × $${s.rates.usd||0}`}</div>`;
+ return card;
+}
+function renderReport(){
+ const v=$("#view"); v.innerHTML="";
+ if(!state.reportStudio||!SNAP.studios.includes(state.reportStudio))state.reportStudio=SNAP.studios[0];
+ if(!state.reportPeriod||!SNAP.periods.includes(state.reportPeriod))state.reportPeriod=SNAP.current_period||SNAP.periods[SNAP.periods.length-1];
+ const ctl=el("div","controls noprint");
+ const ss=el("select");ss.innerHTML=SNAP.studios.map(s=>`<option${s===state.reportStudio?" selected":""}>${esc(s)}</option>`).join("");ss.onchange=()=>{state.reportStudio=ss.value;renderReport();};
+ const ps=el("select");ps.innerHTML=SNAP.periods.map(p=>`<option${p===state.reportPeriod?" selected":""}>${esc(p)}</option>`).join("");ps.onchange=()=>{state.reportPeriod=ps.value;renderReport();};
+ const link=location.origin+location.pathname+`?report=${encodeURIComponent(state.reportStudio)}&period=${encodeURIComponent(state.reportPeriod)}`;
+ const bL=el("button","chip");bL.textContent="Копировать ссылку";bL.onclick=()=>{try{navigator.clipboard.writeText(link);}catch(e){}bL.textContent="Скопировано ✓";setTimeout(()=>bL.textContent="Копировать ссылку",1500);};
+ const bP=el("button","chip");bP.textContent="Скачать PDF";bP.onclick=()=>downloadPDF(bP,state.reportStudio,state.reportPeriod);
+ ctl.appendChild(ss);ctl.appendChild(ps);ctl.appendChild(bL);ctl.appendChild(bP);
+ v.appendChild(ctl);
+ v.appendChild(buildReportCard(state.reportStudio,state.reportPeriod));
+}
+async function downloadPDF(btn,studio,period){
+ const src=document.querySelector(".report");
+ if(!src||!window.html2canvas||!(window.jspdf&&window.jspdf.jsPDF)){alert("PDF-библиотека ещё грузится, попробуй через секунду");return;}
+ const old=btn.textContent;btn.textContent="Готовлю PDF…";btn.disabled=true;
+ const clone=src.cloneNode(true);
+ clone.classList.add("pdfdoc");
+ clone.style.cssText+=";position:fixed;left:-10000px;top:0;z-index:-1";
+ document.body.appendChild(clone);
+ try{
+  const canvas=await html2canvas(clone,{backgroundColor:"#ffffff",scale:2,useCORS:true});
+  const {jsPDF}=window.jspdf;
+  const landscape=canvas.width>=canvas.height;
+  const pdf=new jsPDF({orientation:landscape?"landscape":"portrait",unit:"pt",format:"a4"});
+  const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight(),m=28;
+  let w=pw-m*2,h=canvas.height*(w/canvas.width);
+  if(h>ph-m*2){const k=(ph-m*2)/h;h*=k;w*=k;}
+  pdf.addImage(canvas.toDataURL("image/jpeg",0.95),"JPEG",(pw-w)/2,m,w,h);
+  pdf.save((`Camble_${studio}_${period}`).replace(/[^\wА-Яа-яЁё\-]+/g,"_")+".pdf");
+ }catch(e){alert("Не удалось сделать PDF: "+e);}
+ finally{clone.remove();btn.textContent=old;btn.disabled=false;}
+}
+
+function renderCeo(){
+ const v=$("#view"); v.innerHTML="";
+ // выбор периода / месяца
+ const ctl=el("div","controls");
+ const seg=el("div","seg",`<button class="${state.ceoScope==="period"?"on":""}" data-s="period">По периоду</button><button class="${state.ceoScope==="month"?"on":""}" data-s="month">За месяц</button>`);
+ seg.querySelectorAll("button").forEach(b=>b.onclick=()=>{state.ceoScope=b.dataset.s;state.ceoSel=null;renderCeo();});
+ ctl.appendChild(seg);
+ const opts = state.ceoScope==="period"?SNAP.periods:SNAP.months;
+ const dflt = state.ceoScope==="period"?SNAP.current_period:SNAP.current_month;
+ if(!state.ceoSel||!opts.includes(state.ceoSel))state.ceoSel=opts.includes(dflt)?dflt:opts.at(-1);
+ const sel=el("select");sel.innerHTML=opts.map(o=>`<option${o===state.ceoSel?" selected":""}>${esc(o)}</option>`).join("");
+ sel.onchange=()=>{state.ceoSel=sel.value;renderCeo();};
+ ctl.appendChild(sel);
+ ctl.classList.add("noprint");
+ const link=location.origin+location.pathname+`?ceo=${encodeURIComponent(state.ceoSel)}`;
+ const bL=el("button","chip");bL.textContent="Копировать ссылку";bL.onclick=()=>{try{navigator.clipboard.writeText(link);}catch(e){}bL.textContent="Скопировано ✓";setTimeout(()=>bL.textContent="Копировать ссылку",1500);};
+ const bP=el("button","chip");bP.textContent="Скачать PDF";bP.onclick=()=>downloadPDF(bP,"Илья",state.ceoSel);
+ ctl.appendChild(bL);ctl.appendChild(bP);
+ v.appendChild(ctl);
+
+ const labels = state.ceoScope==="period"?[state.ceoSel]:SNAP.periods.filter(l=>monthOf(l)===state.ceoSel);
+ const rate=(SNAP.fx||{}).usdrub;
+ let T={h:0,r:0,u:0,b:0,usd:0};
+ const rows=SNAP.payout.studios.map(s=>{
+  let h=0,r=0,u=0,hasR=false;
+  s.models.forEach(m=>{const x=sumModelOver(m,labels);h+=x.hours;u+=x.usd;if(x.rub!=null){r+=x.rub;hasR=true;}});
+  const bonus = studioBonus(s, state.ceoScope, state.ceoSel);
+  const totalRub=(hasR?r:0)+bonus;
+  const inUsd = rate!=null ? u + totalRub/rate : null;   // сколько перевести студии в $ по курсу
+  T.h+=h;T.r+=hasR?r:0;T.u+=u;T.b+=bonus;if(inUsd!=null)T.usd+=inUsd;
+  return `<tr><td class="stname">${esc(s.studio)}</td><td class="num">${hm(h)}</td><td class="num rub">${hasR?rub(r):"—"}</td><td class="num usd">${usd(u,0)}</td><td class="num rub">${bonus?rub(bonus):"—"}</td><td class="num"><b>${inUsd!=null?usd(inUsd):"—"}</b></td></tr>`;
+ }).join("");
+
+ const card=el("div","card full report",`
+  <div class="rephead"><div><h3 style="margin:0">Отчёт для Ильи · ${esc(state.ceoSel||"")}</h3>
+   <div class="cap" style="margin:4px 0 0">Сводка по всем студиям · ₽ по норме смены, $ по месячной норме, перевод в доллары по курсу</div></div>
+   <div class="repbig"><div class="muted" style="font-size:11px">К выплате всего</div><div class="num usd" style="font-size:26px;font-weight:800">${T.usd?usd(T.usd):"—"}</div>${rate!=null?`<div class="muted" style="font-size:11px">по курсу ${intf(rate)} ₽/$</div>`:""}</div></div>
+  <table><thead><tr><th>Студия</th><th>Часы</th><th>₽</th><th>$</th><th>Бонус ₽</th><th>В долларах</th></tr></thead>
+   <tbody>${rows}</tbody>
+   <tfoot><tr><td>Итого</td><td class="num">${hm(T.h)}</td><td class="num rub">${rub(T.r)}</td><td class="num usd">${usd(T.u,0)}</td><td class="num rub">${T.b?rub(T.b):"—"}</td><td class="num"><b>${T.usd?usd(T.usd):"—"}</b></td></tr></tfoot>
+  </table>
+  <div class="note">${rate!=null?`Курс <b>${intf(rate)} ₽/$</b> (онлайн${SNAP.fx&&SNAP.fx.updated?", "+esc(SNAP.fx.updated):""}). «В долларах» = $-часть + (₽ + бонус) ÷ курс — столько перевести каждой студии.`:"Курс недоступен — показаны только ₽ и $ по отдельности."}</div>`);
+ v.appendChild(card);
+}
+
+// ---------- shell ----------
+function renderNav(){
+ const nav=$("#nav");nav.innerHTML="";
+ SECTIONS.forEach(([id,label,ic])=>{
+  const b=el("button",state.section===id?"on":"",`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ic}</svg>${label}`);
+  b.onclick=()=>{state.section=id;render();};
+  nav.appendChild(b);
+ });
+}
+function render(){
+ renderNav();
+ const names={overview:"Overview",live:"Live · Today",online:"Online Analytics",studios:"Studios",models:"Models",discipline:"Discipline",payroll:"Payroll",report:"Studio report",ceo:"Отчёт для Ильи"};
+ $("#title").textContent=names[state.section];
+ if(!SNAP||SNAP.status!=="ok"){
+  $("#view").innerHTML=`<div class="banner">${SNAP&&SNAP.status==="error"?"Data refresh failed: "+esc(SNAP.error||""):"Loading data…"}</div>`;
+  return;
+ }
+ $("#subtitle").textContent=`All studios · ${state.section==="overview"||state.section==="payroll"?"period "+(SNAP.current_period||""):""} · MSK (UTC+3)`;
+ ({overview:renderOverview,live:renderLive,online:renderOnline,studios:renderStudios,models:renderModels,discipline:renderDiscipline,payroll:renderPayroll,report:renderReport,ceo:renderCeo}[state.section])();
+}
+function applyMeta(){
+ if(!SNAP)return;
+ const on=SNAP.status==="ok";
+ $("#pulse").className="pulse"+(on&&SNAP.overview&&SNAP.overview.online_now>0?"":" off");
+ $("#livetxt").textContent=on?`${SNAP.overview.online_now} online now`:"offline";
+ const u=$("#upd");
+ if(on){
+  const gen=SNAP.generated_at?new Date(SNAP.generated_at):null;
+  const age=gen?Math.max(0,Math.round((Date.now()-gen.getTime())/60000)):null;
+  if(age==null){u.className="upd";u.textContent=`updated ${SNAP.generated_label} МСК`;}
+  else if(age<=12){u.className="upd";u.innerHTML=`<span class="freshdot ok"></span>updated ${SNAP.generated_label} МСК · live`;}
+  else if(age<=25){u.className="upd warn";u.innerHTML=`<span class="freshdot warn"></span>данные отстают · ${agoTxt(age)}`;}
+  else {u.className="upd bad";u.innerHTML=`<span class="freshdot bad"></span>⚠ данные устарели · ${agoTxt(age)} · бокс мог отключиться`;}
+ } else { u.className="upd bad"; u.innerHTML=`<span class="freshdot bad"></span>нет связи с данными`; }
+ $("#foot").innerHTML=on?`v1 · ${SNAP.periods.length} periods<br/>auto-refresh ${SNAP.interval_min} min`:"connecting…";
+}
+async function load(){
+ try{
+  const r=await fetch("snapshot.json",{cache:"no-store"});
+  SNAP=await r.json();
+ }catch(e){SNAP={status:"error",error:String(e)};}
+ if(state.payScope==="period"&&!state.paySel&&SNAP.periods)state.paySel=SNAP.current_period||SNAP.periods.at(-1);
+ applyMeta();render();
+ // снапшот ещё строится при старте — переспрашиваем чаще, пока не готов
+ if(!SNAP||SNAP.status!=="ok"){clearTimeout(window._fast);window._fast=setTimeout(load,4000);}
+}
+const _qp=new URLSearchParams(location.search);
+if(_qp.get("report")){state.section="report";state.reportStudio=_qp.get("report");state.reportPeriod=_qp.get("period")||null;document.body.classList.add("reportonly");}
+if(_qp.get("ceo")){state.section="ceo";state.ceoScope="period";state.ceoSel=_qp.get("ceo");}
+load();
+setInterval(load, 5*60*1000);
+$("#modalbg").onclick=closeModel;
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModel();});
+</script>
+</body>
+</html>
